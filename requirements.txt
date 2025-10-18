@@ -1,0 +1,13 @@
+##REQUIREMENTS
+#LAs librerias usadas son:
+#meshtastic y meshtastic.protobuf (envio de mensajes a nodos)
+#paho.mqtt.client  (cliente de mqtt)
+#cryptography (cifra y descifra mensajes)
+#base64 y hashlib (seguridad y funciones para archivos)
+#json,datetime y os (almacenan datos,tiempos y archivos)
+#ssl (para la seguridad de la comunicación mqtt)
+-------------------------------
+#LIBRERIAS A INSTALAR
+#pip install paho-mqtt  -instalas módulos
+#pip install meshtastic
+#pip install cryptography
