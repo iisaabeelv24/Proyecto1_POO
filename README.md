@@ -15,22 +15,25 @@ LIBRERIAS A INSTALAR
 #Activate.ps1 esta incluido en el .venv y activa los entornos.
 
 -------------------------------
-
-REQUIREMENTS
-LAs librerias usadas son:
-meshtastic y meshtastic.protobuf (envio de mensajes a nodos)
-paho.mqtt.client  (cliente de mqtt)
-cryptography (cifra y descifra mensajes)
-base64 y hashlib (seguridad y funciones para archivos)
-json,datetime y os (almacenan datos,tiempos y archivos)
-ssl (para la seguridad de la comunicación mqtt)
-
 MÓDULOS
--Dispositivo: almacena la información del nodo
--Comunicador:conecta mqtt con meshtastic y realiza el envío
-            de mensajes, posiciones y la info.de sensores
--recibir_mensaje: procesa y descifra los mensajes
--mqtt_sensores: se conecta a MQTT y recibe los datos de sensores
--almacenamiento:guarda los mensajes posiciones y datos de sensores en
-            un archivo JSON con historial
--menu=InterfazTerminal: proporciona el menu al usuario
+-Dispositivo
+-Comunicador
+-recibir_mensaje
+-mqtt_sensores
+-almacenamiento
+-menu=InterfazTerminal
+#------------------------------------
+MESHTASTIC COMUNICACIÓN
+El sistema cliente para la red Meshtastic que permite la comunicación mesh, 
+permitiendo el envío y recepción de mensajes, gestiona las posiciones GPS 
+y aporta datos de sensores mediante MQTT.
+
+Tiene una serie de caracteísticas, como:
+-Comunicación de mensajes:envia y recibe mensajes en tiempo real,
+cifra los mensajes y los almacena en un .JSON
+-Gestiona posiciones: envia coordenadas GPS,
+recibe posiciones de otros nodos
+y almacena los datos en un .JSON
+-Datos de sensores:se conectan a MQTT y se reciben datos de ellos.
+-Almacenamiento: se crean 3 archivos .JSON para mensajes, posiciones y sensores.
+
