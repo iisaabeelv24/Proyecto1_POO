@@ -25,7 +25,7 @@ class Dispositivo:
         
         # Generate 4 random hexadecimal characters to create a unique node name
         self.random_hex_chars = ''.join(random.choices('0123456789abcdef', k=4))
-        self.node_name = '!abcd' + self.random_hex_chars
+        self.node_name = '!abcd9296' #+ self.random_hex_chars
         self.node_number = int(self.node_name.replace("!", ""), 16)
         self.global_message_id = random.getrandbits(32)
         self.client_short_name = "IVC"
