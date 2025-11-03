@@ -6,13 +6,23 @@ from mqtt_sensores import MQTTsensores
 from almacenamiento import Almacenamiento
 from menu import InterfazTerminal
 from meshtastic import BROADCAST_NUM
+from pathlib import Path 
+import os
 
 def main():
+    directorio = Path("logs")  # Directorio para almacenamiento de datos
+
+    if os.path.isdir('logs'):#verifica si el directorio existe
+        print("El directorio 'logs' existe.")
+    else:
+        print("El directorio 'logs' no existe.")
+
+    print(f"Usando directorio de almacenamiento: {directorio.resolve()}")
     # Crear instancias
     dispositivo = Dispositivo()
     comunicador = Comunicador(dispositivo)
     #Crear almacenamiento y receptor y sensores con almacenamiento
-    almacenamiento = Almacenamiento()
+    almacenamiento = Almacenamiento(directorio=directorio)
     receptor = RecibirMensaje(comunicador, dispositivo,almacenamiento)
     mqtt_sensores = MQTTsensores(comunicador,almacenamiento)
 

@@ -2,11 +2,14 @@ import json
 import os
 from datetime import datetime
 import threading
+from pathlib import Path 
+#rutas de archivos y directorios multiplataforma
+
 
 class Almacenamiento:
-    def __init__(self, directorio="datos"):
-        self.directorio = directorio
-        self.archivo_mensajes = os.path.join(directorio, "mensajes.json")
+    def __init__(self, directorio="logs"):
+        #self.directorio = Path(directorio)
+        self.archivo_mensajes = directorio / "mensajes.json"
         self.archivo_posiciones = os.path.join(directorio, "posiciones.json")
         self.archivo_sensores = os.path.join(directorio, "sensores.json")
         
@@ -40,9 +43,12 @@ class Almacenamiento:
         """Guarda un mensaje de texto en el archivo JSON"""
         with self.lock:
             try:
-                # Leer mensajes existentes
-                with open(self.archivo_mensajes, 'r', encoding='utf-8') as f:
-                    mensajes = json.load(f)# lee todos los mensajes
+                # Lee mensajes existentes
+                if self.archivo_mensajes.exists():
+                    with open(self.archivo_mensajes, 'r', encoding='utf-8') as f:
+                        mensajes = json.load(f)
+                else:
+                    mensajes = []
                 
                 # Agregar nuevo mensaje
                 nuevo_mensaje = {

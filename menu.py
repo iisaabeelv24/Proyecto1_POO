@@ -1,4 +1,5 @@
 from meshtastic import BROADCAST_NUM
+#from pathlib import Path 
 
 class InterfazTerminal:
     def __init__(self, comunicador, receptor, mqtt_sensores, almacenamiento):
