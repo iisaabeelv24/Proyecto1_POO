@@ -36,4 +36,17 @@ recibe posiciones de otros nodos
 y almacena los datos en un .JSON
 -Datos de sensores:se conectan a MQTT y se reciben datos de ellos.
 -Almacenamiento: se crean 3 archivos .JSON para mensajes, posiciones y sensores.
+#----------------------------------------
+INTERFAZ GRÁFICA:
+Se crea una interfaz gráfica que permite enviar y recibir mensajes además de visualizar un mapa, gestionando las coordenadas.
 
+Este script tiene una serie de caracteristicas como:
+-Comunicación con otros usuarios: envio y recepción de mensajes.
+-Visualización de coordenadas en un mapa
+
+Se usan elementos como:
+-Hilos
+-Decoradores
+-Clases abstractas
+-Herencia múltiple
+-Tkinter y tkintermapview
