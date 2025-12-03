@@ -7,6 +7,7 @@ from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2
 from meshtastic import BROADCAST_NUM, protocols
 import paho.mqtt.client as mqtt
 import random
+import __pycache__
 import time
 import ssl
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes

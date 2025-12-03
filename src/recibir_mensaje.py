@@ -1,17 +1,35 @@
+#MESHTASTIC
 from meshtastic.protobuf import mesh_pb2, mqtt_pb2, portnums_pb2
 from meshtastic import BROADCAST_NUM
 import base64
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+import threading
+import time
+
+
 
 class RecibirMensaje:  
     def __init__(self, comunicador, dispositivo, almacenamiento): 
         self.comunicador = comunicador
         self.dispositivo = dispositivo
-        self.almacenamiento = almacenamiento  
+        self.almacenamiento = almacenamiento
+        #self.gui_callback = self.set_gui_callback
         self.debug = True
         self.print_service_envelope = False
         self.print_message_packet = False
+        self.algo = None
+
+        self.mp_1 = None
+
+        
+        # Creamos el hilo con nombre 'recibir_mesh'
+        self.hilomesh = threading.Thread(target=self.main_thread, name="recibir_mesh", daemon=True)
+
+    def set_gui_callback(self, callback):
+        """Asigna el callback para la interfaz gráfica"""
+        self.gui_callback = callback
+
 
     def set_almacenamiento(self, almacenamiento):
         """Asigna el sistema de almacenamiento de datos"""
@@ -42,7 +60,8 @@ class RecibirMensaje:
             self.decode_encrypted(mp)
 
         # Procesar el mensaje
-        self.procesar_mensaje(mp)
+        #self.procesar_mensaje(mp)
+        self.mp_1 = mp
 
     def procesar_mensaje(self, mp):
         """Procesa los mensajes según su tipo (portnum)"""
@@ -51,11 +70,12 @@ class RecibirMensaje:
 
         portnum = mp.decoded.portnum
         remitente = f"!{hex(getattr(mp, 'from'))[2:]}"
-        
+        mensaje_gui = ""
+
         if portnum == portnums_pb2.TEXT_MESSAGE_APP:
             mensaje = mp.decoded.payload.decode('utf-8', errors='ignore')
+            mensaje_gui = f" Mensaje de texto de {remitente}: {mensaje}"
             print(f" Mensaje de texto de {remitente}: {mensaje}")
-            
             # guarda mensajes
             if self.almacenamiento:
                 self.almacenamiento.guardar_mensaje(mensaje, remitente, "texto")
@@ -64,6 +84,7 @@ class RecibirMensaje:
             user = mesh_pb2.User()
             user.ParseFromString(mp.decoded.payload)
             nombre_nodo = user.long_name or user.short_name or "Desconocido"
+            mensaje_gui = f" Información de nodo {remitente}: {nombre_nodo}"
             print(f"  Información de nodo {remitente}: {nombre_nodo}")
             
             #  guarda info del nodo
@@ -102,10 +123,18 @@ class RecibirMensaje:
             print(f" Mensaje de routing/ACK de {remitente}")
             
         elif portnum == portnums_pb2.ADMIN_APP:
+            mensaje_gui = f"  Mensaje administrativo de {remitente}"
             print(f"  Mensaje administrativo de {remitente}")
             
         else:
+            mensaje_gui = f"TIPO {portnum} de {remitente}"
             print(f" Mensaje tipo {portnum} de {remitente}: {mp.decoded.payload}")
+
+        #print(f" Procesado mensaje del puerto {portnum} de {remitente}")
+        #print(f"Payload bruto: {mp.decoded.payload}")
+        self.algo = mp.decoded.payload
+        #if self.gui_callback and mensaje_gui:
+        #self.gui_callback(mensaje_gui)
 
     def decode_encrypted(self, mp):
         """Descifra mensajes encriptados"""
@@ -132,3 +161,39 @@ class RecibirMensaje:
         """Configura opciones de debug"""
         self.print_service_envelope = service_envelope
         self.print_message_packet = message_packet
+
+    def main_thread(self):
+        
+        while True:
+            try:
+                #print(f"Ejecutando en el hilo: {threading.current_thread().name}")
+                if self.mp_1 != None:
+                    self.procesar_mensaje(self.mp_1)
+                time.sleep(2)
+            except KeyboardInterrupt:
+                print("Saliendo...")
+        
+
+
+    def init_thread(self):
+        self.hilomesh.start()
+        self.hilomesh.join()
+
+
+
+
+def main():
+    #comunicador = comunicador(dispositivo)
+    #dispositivo = dispositivo()
+    #almacenamiento = almacenamiento()
+    
+    rx_messsgr = RecibirMensaje()
+    rx_messsgr.init_thread()
+    
+
+
+
+    print("El hilo ha finalizado.")  
+
+if __name__ == "__main__":
+    main()

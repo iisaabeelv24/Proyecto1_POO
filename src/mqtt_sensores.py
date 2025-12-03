@@ -1,5 +1,7 @@
+#MQTT
 import json
 import paho.mqtt.client as mqtt
+import threading
 import time
 
 class MQTTsensores:
@@ -122,3 +124,20 @@ class MQTTsensores:
                 self.client_sensores.subscribe(nuevo_topic)
             if self.debug:
                 print(f" Nuevo tema agregado: {nuevo_topic}")
+    
+# Definimos el hilo
+def recibir_mqtt():
+    while True:
+        try:
+            print(f"Ejecutando en el hilo: {threading.current_thread().name}")
+            time.sleep(2)
+        except KeyboardInterrupt:
+            print("saliendo...")
+
+# Creamos el hilo con nombre 'recibir_mqtt'
+hilo = threading.Thread(target=recibir_mqtt, name="recibir_mqtt", daemon=True)
+
+# Iniciamos el hilo
+def init_hilo():
+    hilo.start()
+    hilo.join()

@@ -8,11 +8,14 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 import base64
 import re
+import threading
+
+
 
 
 class Comunicador:
-    def __init__(self, dispositivo):
-            self.dispositivo = dispositivo
+    def __init__(self):
+            #self.dispositivo = dispositivo
             #### Debug Options
             self.debug = True
             self.auto_reconnect = True
@@ -24,10 +27,17 @@ class Comunicador:
             self.print_node_position = True
             self.print_node_telemetry = True
 
-            self.lat = dispositivo.lat
-            self.lon = dispositivo.lon
-            self.alt = dispositivo.alt
+            self.lat = 0 #dispositivo.lat
+            self.lon = 0 # dispositivo.lon
+            self.alt = 100 #dispositivo.alt
 
+            # Generate 4 random hexadecimal characters to create a unique node name
+            self.node_name = '!abcd9296' #+ self.random_hex_chars
+            self.node_number = int(self.node_name.replace("!", ""), 16)
+            self.global_message_id = random.getrandbits(32)
+            self.client_short_name = "IVC"
+            self.client_long_name = "Isabel"
+    
             ### Default settings
             self.mqtt_broker = "mqtt.meshtastic.org"
             self.mqtt_port = 1883
@@ -37,14 +47,37 @@ class Comunicador:
             self.root_topic = "msh/EU_868/ES/2/e/"
             self.channel = "TestMQTT"
             self.key = "ymACgCy9Tdb8jHbLxUxZ/4ADX+BWLOGVihmKHcHTVyo="
-            self.message_text = "Person man, person man Hit on the head with a frying pan Lives his life in a garbage can"
-
+            self.message_text = "Test---- Vive o Mueres"
 
             self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="", clean_session=True, userdata=None)
             self.client.on_connect = self.on_connect
             self.client.on_disconnect = self.on_disconnect
-           # self.client.on_message = self.on_message
+            # self.client.on_message = self.on_message
             self.receptor=None
+
+            self.publish_topic = None
+
+            self.hilomesh = threading.Thread(target=self.main_thread, name="recibir_mesh", daemon=True)
+
+
+    def main_thread(self):
+        
+        while True:
+            try:
+                if self.client.is_connected:
+                    self.send_node_info(BROADCAST_NUM, want_response=False)
+                    time.sleep(4)
+                    self.send_position(BROADCAST_NUM)
+                    time.sleep(4)
+                    self.send_message(BROADCAST_NUM, self.message_text)
+                    time.sleep(4)
+            except KeyboardInterrupt:
+                print("Saliendo...")
+
+    def init_thread(self):
+        self.hilomesh.start()
+        self.hilomesh.join()
+
 
     def set_receptor(self,receptor):
         self.receptor=receptor
@@ -226,10 +259,10 @@ class Comunicador:
                 destination_id=int(destination_id[1:],16)
 
         # Use the global message ID and increment it for the next call
-        mesh_packet.id = self.dispositivo.global_message_id
-        self.dispositivo.global_message_id += 1
+        #mesh_packet.id = self.dispositivo.global_message_id
+        #self.dispositivo.global_message_id += 1
         
-        setattr(mesh_packet, "from", self.dispositivo.node_number)
+        setattr(mesh_packet, "from", self.node_number)
         mesh_packet.to = destination_id
         mesh_packet.want_ack = False
         mesh_packet.channel = self.generate_hash(self.channel, self.key)
@@ -243,8 +276,9 @@ class Comunicador:
         service_envelope = mqtt_pb2.ServiceEnvelope()
         service_envelope.packet.CopyFrom(mesh_packet)
         service_envelope.channel_id = self.channel
-        service_envelope.gateway_id = self.dispositivo.node_name
+        service_envelope.gateway_id = self.node_name
 
+        print(self.publish_topic)
         payload = service_envelope.SerializeToString()
         self.client.publish(self.publish_topic, payload)
 
@@ -252,7 +286,7 @@ class Comunicador:
         mesh_packet.channel = self.generate_hash(channel, key)
         key_bytes = base64.b64decode(key.encode('ascii'))
         nonce_packet_id = mesh_packet.id.to_bytes(8, "little")
-        nonce_from_node = self.dispositivo.node_number.to_bytes(8, "little")
+        nonce_from_node = self.node_number.to_bytes(8, "little")
         nonce = nonce_packet_id + nonce_from_node
         cipher = Cipher(algorithms.AES(key_bytes), modes.CTR(nonce), backend=default_backend())
         encryptor = cipher.encryptor()
@@ -267,3 +301,11 @@ class Comunicador:
         encoded_message.payload = b"\030\000"
         self.generate_mesh_packet(destination_id, encoded_message)
 
+
+def main():
+    comunicador = Comunicador()
+    comunicador.init_thread()
+
+
+if __name__ == "__main__":
+    main()

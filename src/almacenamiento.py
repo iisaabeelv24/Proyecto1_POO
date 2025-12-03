@@ -3,16 +3,30 @@ import os
 from datetime import datetime
 import threading
 from pathlib import Path 
+from abc import ABC, abstractmethod # define interfaces
+
+#from recibir_mensaje import RecibirMensaje
 #rutas de archivos y directorios multiplataforma
 
+#Clase con herencia multiple
+class Logger:
+    def log_info(self, mensaje):
+        print(f" {mensaje}")
+    def log_error(self, mensaje):
+        print(f" ERROR: {mensaje}")
+    def log(self, mensaje):
+        print(f" {mensaje}")
 
-class Almacenamiento:
+#Clase abstracta con herencia multiple
+class Almacenamiento(ABC, Logger):
     def __init__(self, directorio="logs"):
-        #self.directorio = Path(directorio)
-        self.archivo_mensajes = directorio / "mensajes.json"
-        self.archivo_posiciones = os.path.join(directorio, "posiciones.json")
-        self.archivo_sensores = os.path.join(directorio, "sensores.json")
-        
+        #inicia logger
+        super().__init__() if hasattr(super(), '__init__') else None
+        self.directorio = Path(directorio)
+        self.archivo_mensajes = self.directorio / "mensajes.json"
+        self.archivo_posiciones = self.directorio / "posiciones.json"
+        self.archivo_sensores = self.directorio / "sensores.json"
+
         # Crear directorio si no existe
         os.makedirs(directorio, exist_ok=True)
         
@@ -38,6 +52,24 @@ class Almacenamiento:
     def _obtener_timestamp(self):
         """Obtiene el timestamp actual formateado"""
         return datetime.now().isoformat()
+
+#Metodos abstractos    
+    @abstractmethod
+    def guardar_mensaje(self, mensaje_texto, remitente, tipo="texto"):
+        pass
+    
+    @abstractmethod
+    def guardar_posicion(self, latitud, longitud, altitud, remitente, precision=None):
+        pass
+    
+    @abstractmethod
+    def guardar_dato_sensor(self, topic, datos, remitente=None):
+        pass
+
+class AlmacenamientoJSON(Almacenamiento):
+    def __init__(self, directorio="logs"):
+        super().__init__(directorio)
+
     
     def guardar_mensaje(self, mensaje_texto, remitente, tipo="texto"):
         """Guarda un mensaje de texto en el archivo JSON"""
@@ -64,21 +96,26 @@ class Almacenamiento:
                 with open(self.archivo_mensajes, 'w', encoding='utf-8') as f:
                     json.dump(mensajes, f, indent=2, ensure_ascii=False, default=str)
                 
-                print(f" Mensaje guardado: {mensaje_texto[:50]}...")
+                self.log(f" Mensaje guardado: {mensaje_texto[:50]}...")
+
                 return True
                 
             except Exception as e:
-                print(f"Error guardando mensaje: {e}")
+                self.log(f"Error guardando mensaje: {e}")
                 return False
+    
     
     def guardar_posicion(self, latitud, longitud, altitud, remitente, precision=None):
         """Guarda una posición GPS en el archivo JSON"""
         with self.lock:
             try:
                 # Leer posiciones existentes
-                with open(self.archivo_posiciones, 'r', encoding='utf-8') as f:
-                    posiciones = json.load(f)
-                
+                if self.archivo_posiciones.exists():
+                    with open(self.archivo_posiciones, 'r', encoding='utf-8') as f:
+                        posiciones = json.load(f)
+                else:
+                    posiciones = []
+
                 # Agregar nueva posición
                 nueva_posicion = {
                     "timestamp": self._obtener_timestamp(),
@@ -97,21 +134,25 @@ class Almacenamiento:
                 with open(self.archivo_posiciones, 'w', encoding='utf-8') as f:
                     json.dump(posiciones, f, indent=2, ensure_ascii=False, default=str)
                 
-                print(f" Posición guardada: {latitud}, {longitud}")
+                self.log(f" Posición guardada: {latitud}, {longitud}")
                 return True
                 
             except Exception as e:
-                print(f" Error guardando posición: {e}")
+                self.log(f" Error guardando posición: {e}")
                 return False
+    
     
     def guardar_dato_sensor(self, topic, datos, remitente=None):
         """Guarda datos de sensores en el archivo JSON"""
         with self.lock:
             try:
                 # Leer datos existentes
-                with open(self.archivo_sensores, 'r', encoding='utf-8') as f:
-                    sensores = json.load(f)
-                
+                if self.archivo_sensores.exists():
+                    with open(self.archivo_sensores, 'r', encoding='utf-8') as f:
+                        sensores = json.load(f)
+                else:
+                    sensores = []
+
                 # Agregar nuevo dato
                 nuevo_dato = {
                     "timestamp": self._obtener_timestamp(),
@@ -126,24 +167,30 @@ class Almacenamiento:
                 with open(self.archivo_sensores, 'w', encoding='utf-8') as f:
                     json.dump(sensores, f, indent=2, ensure_ascii=False, default=str)
                 
-                print(f"Dato de sensor guardado: {topic}")
+                self.log(f"Dato de sensor guardado: {topic}")
                 return True
                 
             except Exception as e:
-                print(f"Error guardando dato de sensor: {e}")
+                self.log(f"Error guardando dato de sensor: {e}")
                 return False
     
+   
     def obtener_estadisticas(self):
         """Obtiene estadísticas de los datos almacenados"""
         try:
-            with open(self.archivo_mensajes, 'r', encoding='utf-8') as f:
-                mensajes = json.load(f)
-            
-            with open(self.archivo_posiciones, 'r', encoding='utf-8') as f:
-                posiciones = json.load(f)
-            
-            with open(self.archivo_sensores, 'r', encoding='utf-8') as f:
-                sensores = json.load(f)
+            mensajes=[]
+            if self.archivo_mensajes.exists():
+                with open(self.archivo_mensajes, 'r', encoding='utf-8') as f:
+                    mensajes = json.load(f)
+            posiciones = []
+            if self.archivo_posiciones.exists():
+                with open(self.archivo_posiciones, 'r', encoding='utf-8') as f:
+                    posiciones = json.load(f)
+
+            sensores = []
+            if self.archivo_sensores.exists():
+                with open(self.archivo_sensores, 'r', encoding='utf-8') as f:
+                    sensores = json.load(f)
             
             return {
                 "total_mensajes": len(mensajes),
@@ -154,8 +201,9 @@ class Almacenamiento:
             }
             
         except Exception as e:
-            print(f"Error obteniendo estadísticas: {e}")
+            self.log(f"Error obteniendo estadísticas: {e}")
             return {}
+    
     
     def exportar_txt(self, archivo_salida="datos_exportados.txt"):
         """Exporta todos los datos a un archivo de texto legible"""
@@ -191,9 +239,34 @@ class Almacenamiento:
                         f.write(f"[{pos.get('timestamp', '')}] {pos.get('remitente', '')}: ")
                         f.write(f"Lat={coords.get('latitud', 'N/A')}, Lon={coords.get('longitud', 'N/A')}, Alt={coords.get('altitud', 'N/A')}\n")
                 
-            print(f"Datos exportados a: {archivo_salida}")
+            self.log(f"Datos exportados a: {archivo_salida}")
             return True
             
         except Exception as e:
-            print(f" Error exportando datos: {e}")
+            self.log(f" Error exportando datos: {e}")
             return False
+
+#Generador       
+    def generar_mensajes_recientes(self, limite=10):
+    
+            try:
+                if not self.archivo_mensajes.exists():
+                    self.log_info("No hay mensajes para generar")
+                    return
+                
+                with open(self.archivo_mensajes, 'r', encoding='utf-8') as f:
+                    mensajes = json.load(f)
+                
+                # Ordenar por timestamp (más recientes primero)
+                mensajes_ordenados = sorted(mensajes, 
+                                        key=lambda x: x.get('timestamp', ''), 
+                                        reverse=True)
+                
+                for i, mensaje in enumerate(mensajes_ordenados):
+                    if i >= limite:
+                        break
+                    yield mensaje  # ← GENERADOR con yield
+                    
+            except Exception as e:
+                self.log_error(f"Generando mensajes: {e}")
+                yield from []  # Generador vacío en caso de error

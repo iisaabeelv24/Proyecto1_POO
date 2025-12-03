@@ -1,67 +1,42 @@
+#!/usr/bin/env python3
 import time
-from dispositivo import Dispositivo
-from comunicador import Comunicador
-from recibir_mensaje import RecibirMensaje
-from mqtt_sensores import MQTTsensores
-from almacenamiento import Almacenamiento
-from menu import InterfazTerminal
-from meshtastic import BROADCAST_NUM
-from pathlib import Path 
+from pathlib import Path
 import os
+import threading
+from src.jara_comunicador import MeshtasticClient
+from src.interfazgrafica import TUFInterface, TUFCommunicator
+
 
 def main():
-    directorio = Path("logs")  # Directorio para almacenamiento de datos
 
-    if os.path.isdir('logs'):#verifica si el directorio existe
-        print("El directorio 'logs' existe.")
+    directorio = Path("logs")
+    if not directorio.exists():
+        print("El directorio 'logs' no existe, creando...")
+        directorio.mkdir(parents=True, exist_ok=True)
     else:
-        print("El directorio 'logs' no existe.")
+        print("El directorio 'logs' existe.")
 
     print(f"Usando directorio de almacenamiento: {directorio.resolve()}")
-    # Crear instancias
-    dispositivo = Dispositivo()
-    comunicador = Comunicador(dispositivo)
-    #Crear almacenamiento y receptor y sensores con almacenamiento
-    almacenamiento = Almacenamiento(directorio=directorio)
-    receptor = RecibirMensaje(comunicador, dispositivo,almacenamiento)
-    mqtt_sensores = MQTTsensores(comunicador,almacenamiento)
 
+    #  INICIA COMUNICADOR MQTT/MESHTASTIC 
+    print("Inicializando MeshtasticClient...")
+    comunicador_meshtastic = MeshtasticClient()
 
-    #Conectar receptor a comunicador
-    comunicador.set_receptor(receptor)
-    
-    # Configurar topic
-    comunicador.set_topic()
-    
-    # Conectar al broker MQTT
-    comunicador.connect_mqtt()
-    time.sleep(2)  # Esperar más tiempo para la conexión
-    
-    # Verificar si está conectado antes de enviar mensajes
-    if comunicador.client.is_connected():
-        print(" Conectado al broker MQTT")
-        
-        # Enviar información inicial
-        comunicador.send_node_info(BROADCAST_NUM, want_response=False)
-        time.sleep(2)
-        
-        comunicador.send_position(BROADCAST_NUM)
-        time.sleep(2)
-        
-        comunicador.send_message(BROADCAST_NUM, 'Hola soy Isabel')
-        time.sleep(2)
-        
-        print("Mensajes iniciales enviados. Iniciando interfaz...")
-        
-        # Iniciar la interfaz de usuario
-        interfaz = InterfazTerminal(comunicador,receptor,mqtt_sensores,almacenamiento)
-        interfaz.ejecutar_menu()
-        
-    else:
-        print("No se pudo conectar al broker MQTT")
-        # Iniciar interfaz aunque no haya conexión
-        interfaz = InterfazTerminal(comunicador,receptor,mqtt_sensores,almacenamiento)
-        interfaz.ejecutar_menu()
+    comunicador_meshtastic.connect()          # conectar MQTT
+    comunicador_meshtastic.start_rx_thread()  # iniciar hilo RX
+    #comunicador_meshtastic.start_tx_thread() 
+
+    time.sleep(1)
+
+   
+    print("Iniciando Communicador")
+    tuf_com = TUFCommunicator("TUF-01", comunicador_meshtastic)
+
+    # INICIA INTERFAZ
+    print("Iniciando interfaz gráfica...")
+    app = TUFInterface()
+    app.mainloop()
+
 
 if __name__ == "__main__":
     main()
